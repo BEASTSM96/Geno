@@ -159,6 +159,37 @@ void TitleBar::Draw( void )
 			}
 		}
 
+		// Build/Run project
+		{
+			if( Workspace* pWorkspace = Application::Instance().CurrentWorkspace() )
+			{
+				ImGui::SetCursorPosX( ImGui::GetCursorPosX() + 10.0f );
+				ImGui::Separator();
+				ImGui::SetCursorPosX( ImGui::GetCursorPosX() + 10.0f );
+
+				ImGui::Spacing();
+				ImGui::SetNextItemWidth( 105.0f );
+				ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 1, 1 ) );
+				ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
+				ImGui::SetCursorPosY( 10.0f );
+
+				if( pWorkspace->m_CurrentAppProcess )
+				{
+					if( ImGui::Button( "Stop" ) )
+						ActionBuildStopRun();
+				}
+				else
+				{
+					if( ImGui::Button( "Build/Run project" ) )
+						ActionBuildBuildAndRun();
+				}
+
+				ImGui::SetCursorPosY( 0.0f );
+				ImGui::PopStyleVar();
+				ImGui::PopStyleColor();
+			}
+		}
+
 #if !defined( __APPLE__ )
 		// System buttons
 		{
@@ -422,6 +453,9 @@ void TitleBar::ActionBuildBuildAndRun( void )
 	{
 		MainWindow::Instance().pOutputWindow->ClearCapture();
 
+		MainWindow::Instance().pTextEdit->SaveAllFiles();
+
+		pWorkspace->Events.BuildFinished += []( Workspace& rWorkspace, std::filesystem::path OutputFile, bool /*Success*/ )
 		// Save all open files before building
 		if( MainWindow::Instance().pTextEdit )
 		{
@@ -445,7 +479,7 @@ void TitleBar::ActionBuildBuildAndRun( void )
 			const int ExitCode = rWorkspace.m_AppProcess->ResultOf();
 			std::cout << "=== " << OutputString << " finished with exit code " << ExitCode << " ===\n";
 
-			StatusBar::Instance().SetColor( StatusBar::Color::RED );
+			StatusBar::Instance().SetColor( StatusBar::Color::DEFAULT );
 		};
 
 		pWorkspace->Build();
@@ -503,3 +537,16 @@ void TitleBar::AddBuildMatrixColumn( BuildMatrix::Column& rColumn )
 	ImGui::PopStyleVar();
 
 } // AddBuildMatrixColumn
+
+//////////////////////////////////////////////////////////////////////////
+
+void TitleBar::ActionBuildStopRun( void )
+{
+	if( Workspace* pWorkspace = Application::Instance().CurrentWorkspace() )
+	{
+		if( Process AppProcess = pWorkspace->m_CurrentAppProcess )
+		{
+			AppProcess.Kill();
+		}
+	}
+} // ActionBuildStopRun
