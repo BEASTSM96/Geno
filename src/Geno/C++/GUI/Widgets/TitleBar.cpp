@@ -163,25 +163,72 @@ void TitleBar::Draw( void )
 		{
 			if( Workspace* pWorkspace = Application::Instance().CurrentWorkspace() )
 			{
+				ImDrawList* pDrawList = ImGui::GetWindowDrawList();
+
 				ImGui::SetCursorPosX( ImGui::GetCursorPosX() + 10.0f );
 				ImGui::Separator();
 				ImGui::SetCursorPosX( ImGui::GetCursorPosX() + 10.0f );
 
 				ImGui::Spacing();
-				ImGui::SetNextItemWidth( 105.0f );
+				ImGui::SetNextItemWidth( 305.0f );
 				ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 1, 1 ) );
 				ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
 				ImGui::SetCursorPosY( 10.0f );
 
+				float ScreenX = ImGui::GetCursorScreenPos().x;
+				float ScreenY = ImGui::GetCursorScreenPos().y;
+
 				if( pWorkspace->m_CurrentAppProcess )
 				{
-					if( ImGui::Button( "Stop" ) )
+					const float  ArrowSize = 0.75f;
+					ImRect       ButtonRect = ImRect( ImVec2( ScreenX, ScreenY ), ImVec2( ScreenX + ArrowSize * 25, ScreenY + ArrowSize * 25 ) );
+
+					bool Hovered = false;
+					bool Held    = false;
+					bool Pressed = ImGui::ButtonBehavior( ButtonRect, ImGui::GetID( "STOP_PROJECT" ), &Hovered, &Held, 0 );
+
+					pDrawList->AddRect( ButtonRect.Min, ButtonRect.Max, IM_COL32( 0, 255, 0, 255 ) );
+
+					if( Hovered )
+					{
+						const ImU32 Color = ImGui::GetColorU32( Held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered );
+						pDrawList->AddRectFilled( ButtonRect.Min, ButtonRect.Max, Color );
+					}
+
+					{
+						pDrawList->AddRectFilled( ButtonRect.Min, ButtonRect.Max, IM_COL32( 255, 255, 255, 255 ) );
+					}
+
+					if( Pressed )
+					{
 						ActionBuildStopRun();
+					}
 				}
 				else
 				{
-					if( ImGui::Button( "Build/Run project" ) )
+					const float  ArrowSize = 0.75f;
+					ImRect       ButtonRect = ImRect( ImVec2( ScreenX, ScreenY ), ImVec2( ScreenX + ArrowSize * 25, ScreenY + ArrowSize * 25 ) );
+
+					bool Hovered = false;
+					bool Held    = false;
+					bool Pressed = ImGui::ButtonBehavior( ButtonRect, ImGui::GetID( "RUN_PROJECT" ), &Hovered, &Held, 0 );
+
+					pDrawList->AddRect( ButtonRect.Min, ButtonRect.Max, IM_COL32( 0, 255, 0, 255 ) );
+
+					if( Hovered )
+					{
+						const ImU32 Color = ImGui::GetColorU32( Held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered );
+						pDrawList->AddRectFilled( ButtonRect.Min, ButtonRect.Max, Color );
+					}
+
+					{
+						ImGui::RenderArrow( pDrawList, ImGui::GetCurrentWindow()->DC.CursorPos + ImGui::GetStyle().FramePadding, IM_COL32( 0, 255, 0, 255 ), ImGuiDir_Right, 1 );
+					}
+
+					if( Pressed )
+					{
 						ActionBuildBuildAndRun();
+					}
 				}
 
 				ImGui::SetCursorPosY( 0.0f );
