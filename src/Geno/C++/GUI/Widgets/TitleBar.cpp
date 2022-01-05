@@ -187,8 +187,6 @@ void TitleBar::Draw( void )
 					bool Held    = false;
 					bool Pressed = ImGui::ButtonBehavior( ButtonRect, ImGui::GetID( "STOP_PROJECT" ), &Hovered, &Held, 0 );
 
-					pDrawList->AddRect( ButtonRect.Min, ButtonRect.Max, IM_COL32( 0, 255, 0, 255 ) );
-
 					if( Hovered )
 					{
 						const ImU32 Color = ImGui::GetColorU32( Held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered );
@@ -196,7 +194,9 @@ void TitleBar::Draw( void )
 					}
 
 					{
-						pDrawList->AddRectFilled( ButtonRect.Min, ButtonRect.Max, IM_COL32( 255, 255, 255, 255 ) );
+
+						if( !Hovered )
+							pDrawList->AddRectFilled( ButtonRect.Min, ButtonRect.Max, IM_COL32( 255, 255, 255, 255 ) );
 					}
 
 					if( Pressed )
@@ -213,8 +213,6 @@ void TitleBar::Draw( void )
 					bool Held    = false;
 					bool Pressed = ImGui::ButtonBehavior( ButtonRect, ImGui::GetID( "RUN_PROJECT" ), &Hovered, &Held, 0 );
 
-					pDrawList->AddRect( ButtonRect.Min, ButtonRect.Max, IM_COL32( 0, 255, 0, 255 ) );
-
 					if( Hovered )
 					{
 						const ImU32 Color = ImGui::GetColorU32( Held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered );
@@ -222,7 +220,7 @@ void TitleBar::Draw( void )
 					}
 
 					{
-						ImGui::RenderArrow( pDrawList, ImGui::GetCurrentWindow()->DC.CursorPos + ImGui::GetStyle().FramePadding, IM_COL32( 0, 255, 0, 255 ), ImGuiDir_Right, 1 );
+						ImGui::RenderArrow( pDrawList, ImGui::GetCurrentWindow()->DC.CursorPos + ImGui::GetStyle().FramePadding, IM_COL32( 255, 255, 255, 255 ), ImGuiDir_Right, 1 );
 					}
 
 					if( Pressed )
