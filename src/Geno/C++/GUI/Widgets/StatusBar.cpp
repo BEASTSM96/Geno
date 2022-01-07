@@ -41,11 +41,6 @@ void StatusBar::SetColor( Color Color )
 
 	switch( Color )
 	{
-		case Color::DEFAULT:
-			m_Col_R = -1;
-			m_Col_G = -1;
-			m_Col_B = -1;
-			break;
 		case Color::BLACK:
 			m_Col_R = 0;
 			m_Col_G = 0;
@@ -66,10 +61,11 @@ void StatusBar::SetColor( Color Color )
 			m_Col_G = 20;
 			m_Col_B = 20;
 			break;
+		case Color::DEFAULT:
 		default:
-			m_Col_R = -1;
-			m_Col_G = -1;
-			m_Col_B = -1;
+			m_Col_R = 48;
+			m_Col_G = 48;
+			m_Col_B = 48;
 			break;
 	}
 
@@ -153,7 +149,7 @@ void StatusBar::Show( void )
 	ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, 0 );
 
 	if( m_Col_R == -1 && m_Col_G == -1 && m_Col_B == -1 )
-		ImGui::PushStyleColor( ImGuiCol_WindowBg, ImVec4( ImColor( 0xF0202020 ) ) );
+		ImGui::PushStyleColor( ImGuiCol_WindowBg, ImVec4( ImColor( 48 ) ) );
 	else
 		ImGui::PushStyleColor( ImGuiCol_WindowBg, ImVec4( ImColor( m_Col_R, m_Col_G, m_Col_B ) ) );
 
