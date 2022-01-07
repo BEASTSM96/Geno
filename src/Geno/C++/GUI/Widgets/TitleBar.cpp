@@ -180,8 +180,11 @@ void TitleBar::Draw( void )
 
 				if( pWorkspace->m_CurrentAppProcess )
 				{
-					const float  ArrowSize = 0.75f;
-					ImRect       ButtonRect = ImRect( ImVec2( ScreenX, ScreenY ), ImVec2( ScreenX + ArrowSize * 25, ScreenY + ArrowSize * 25 ) );
+					const float  BoxSize = 0.75f;
+					const float  FramePadding = ImGui::GetStyle().FramePadding.x;
+					const float  TextSize = ImGui::CalcTextSize( "Stop Running" ).x + FramePadding + 2.1f;
+					ImRect       ButtonRect = ImRect( ImVec2( ScreenX, ScreenY ), ImVec2( ScreenX + BoxSize * 25 + TextSize,     ScreenY + BoxSize * 25 ) );
+					ImRect       IconRect   = ImRect( ImVec2( ScreenX, ScreenY ), ImVec2( ScreenX + BoxSize * 25 + FramePadding, ScreenY + BoxSize * 25 ) );
 
 					bool Hovered = false;
 					bool Held    = false;
@@ -194,9 +197,11 @@ void TitleBar::Draw( void )
 					}
 
 					{
+						pDrawList->AddRectFilled( IconRect.Max, IconRect.Min, IM_COL32( 255, 255, 255, 255 ) );
 
-						if( !Hovered )
-							pDrawList->AddRectFilled( ButtonRect.Min, ButtonRect.Max, IM_COL32( 255, 255, 255, 255 ) );
+						ImGui::SameLine();
+						ImGui::SetCursorPosX( ImGui::GetCursorPosX() + 21.0f );
+						ImGui::Text( "Stop Running" );
 					}
 
 					if( Pressed )
@@ -206,8 +211,9 @@ void TitleBar::Draw( void )
 				}
 				else
 				{
-					const float  ArrowSize = 0.75f;
-					ImRect       ButtonRect = ImRect( ImVec2( ScreenX, ScreenY ), ImVec2( ScreenX + ArrowSize * 25, ScreenY + ArrowSize * 25 ) );
+					const float ArrowSize = 0.75f;
+					const float TextSize = ImGui::CalcTextSize( "Run Project" ).x + ImGui::GetStyle().FramePadding.x + 2.1f;
+					ImRect      ButtonRect = ImRect( ImVec2( ScreenX, ScreenY ), ImVec2( ScreenX + ArrowSize * 25 + TextSize, ScreenY + ArrowSize * 25 ) );
 
 					bool Hovered = false;
 					bool Held    = false;
@@ -221,6 +227,9 @@ void TitleBar::Draw( void )
 
 					{
 						ImGui::RenderArrow( pDrawList, ImGui::GetCurrentWindow()->DC.CursorPos + ImGui::GetStyle().FramePadding, IM_COL32( 255, 255, 255, 255 ), ImGuiDir_Right, 1 );
+						ImGui::SameLine();
+						ImGui::SetCursorPosX( ImGui::GetCursorPosX() + 21.0f );
+						ImGui::Text( "Run Project" );
 					}
 
 					if( Pressed )
