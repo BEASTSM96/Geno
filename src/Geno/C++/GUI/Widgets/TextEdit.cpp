@@ -308,7 +308,7 @@ void TextEdit::ReplaceFile( const std::filesystem::path& rOldPath, const std::fi
 
 void TextEdit::SaveAllFiles()
 {
-	for ( auto& rFile : m_Files )
+	for ( auto& rFile : Files )
 		SaveFile( rFile );
 } // SaveAllFiles
 

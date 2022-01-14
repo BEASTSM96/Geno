@@ -64,10 +64,11 @@ private:
 	void ActionBuildBuildAndRun       ( void );
 	void ActionBuildBuild             ( void );
 	void AddBuildMatrixColumn         ( BuildMatrix::Column& rColumn );
+	void ActionBuildStopRun           ( void );
 
 //////////////////////////////////////////////////////////////////////////
 
-	Texture2D m_IconTexture = { };
+	Texture2D m_IconTexture ={ };
 
 	float     m_Height      = 0.0f;
 

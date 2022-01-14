@@ -178,7 +178,7 @@ void TitleBar::Draw( void )
 				float ScreenX = ImGui::GetCursorScreenPos().x;
 				float ScreenY = ImGui::GetCursorScreenPos().y;
 
-				if( pWorkspace->m_CurrentAppProcess )
+				if( pWorkspace->m_AppProcess )
 				{
 					const float  BoxSize = 0.75f;
 					const float  FramePadding = ImGui::GetStyle().FramePadding.x;
@@ -509,15 +509,8 @@ void TitleBar::ActionBuildBuildAndRun( void )
 
 		MainWindow::Instance().pTextEdit->SaveAllFiles();
 
-		pWorkspace->Events.BuildFinished += []( Workspace& rWorkspace, std::filesystem::path OutputFile, bool /*Success*/ )
-		// Save all open files before building
 		if( MainWindow::Instance().pTextEdit )
-		{
-			TextEdit& rTextEdit = *MainWindow::Instance().pTextEdit;
-
-			for( TextEdit::File& rFile : rTextEdit.Files )
-				rTextEdit.SaveFile( rFile );
-		}
+			MainWindow::Instance().pTextEdit->SaveAllFiles();
 
 		pWorkspace->Events.BuildFinished += []( Workspace& rWorkspace, std::filesystem::path OutputFile, bool /*Success*/ )
 		{
@@ -526,9 +519,11 @@ void TitleBar::ActionBuildBuildAndRun( void )
 			const std::string OutputString = OutputFile.string();
 			const std::wstring OutputWString = OutputFile.wstring();
 
+			rWorkspace.m_AppProcess = Process( OutputWString );
+
 			std::cout << "=== Running " << OutputString << "===\n";
 
-			rWorkspace.m_AppProcess = std::make_unique<Process>( OutputWString );
+			const int ExitCode = rWorkspace.m_AppProcess.ResultOf();
 
 			const int ExitCode = rWorkspace.m_AppProcess->ResultOf();
 			std::cout << "=== " << OutputString << " finished with exit code " << ExitCode << " ===\n";
@@ -598,7 +593,7 @@ void TitleBar::ActionBuildStopRun( void )
 {
 	if( Workspace* pWorkspace = Application::Instance().CurrentWorkspace() )
 	{
-		if( Process AppProcess = pWorkspace->m_CurrentAppProcess )
+		if( Process AppProcess = pWorkspace->m_AppProcess )
 		{
 			AppProcess.Kill();
 		}
