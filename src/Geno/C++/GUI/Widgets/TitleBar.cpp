@@ -452,14 +452,16 @@ void TitleBar::ActionFileOpenWorkspace( void )
 	{
 		auto& RecentWorkspaces = MainWindow::Instance().GetRecentWorkspaces();
 
-		if( RecentWorkspaces.size() < 5 )
-			RecentWorkspaces.insert( MainWindow::Instance().GetRecentWorkspaces().begin(), rFile );
-		else
+		if( std::find( RecentWorkspaces.begin(), RecentWorkspaces.end(), rFile ) != RecentWorkspaces.end() )
 		{
-			RecentWorkspaces.pop_back();
-			RecentWorkspaces.insert( MainWindow::Instance().GetRecentWorkspaces().begin(), rFile );
+			if( RecentWorkspaces.size() < 5 )
+				RecentWorkspaces.insert( RecentWorkspaces.begin(), rFile );
+			else
+			{
+				RecentWorkspaces.pop_back();
+				RecentWorkspaces.insert( RecentWorkspaces.begin(), rFile );
+			}
 		}
-
 
 		Application::Instance().LoadWorkspace( rFile );
 	} );
