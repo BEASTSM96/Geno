@@ -179,6 +179,8 @@ std::wstring CompilerMSVC::MakeCompilerCommandLineString( const Configuration& r
 	else if( FileExtension == ".cxx" ) CommandLine += L" /Tp \"" + rFilePath.wstring() + L"\"";
 	else if( FileExtension == ".cc"  ) CommandLine += L" /Tp \"" + rFilePath.wstring() + L"\"";
 
+	printf( "Linking with command: %ls\n", CommandLine.c_str() );
+
 	return CommandLine;
 
 } // MakeCompilerCommandLineString
@@ -253,6 +255,8 @@ std::wstring CompilerMSVC::MakeLinkerCommandLineString( const Configuration& rCo
 				break;
 		}
 	}
+
+	printf( "Linking with command: %ls\n", CommandLine.c_str() );
 
 	return CommandLine;
 

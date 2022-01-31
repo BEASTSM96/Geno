@@ -21,45 +21,7 @@
 
 #include <filesystem>
 
-//////////////////////////////////////////////////////////////////////////
-
-static int FindGCCVersion()
-{
-	// Run GCC with --version to get the version number of GCC
-	int                Result = 0;
-	Process            GCCVersionProcess = Process( L"g++ --version" );
-
-	Result = GCCVersionProcess.ResultOf();
-
-	if ( Result > 0 )
-		return Result;
-
-	return 0;
-}
-
-//////////////////////////////////////////////////////////////////////////
-
-static std::wstring FindSTLIncludeDirs()
-{
-	// Find standard library files on Linux.
-
-	std::filesystem::path STLPath;
-
-	// TODO: Support MacOS and Support other Linux distros that don't use this file structure.
-#if defined( __linux__ )
-
-	STLPath = "/usr/include/c++";
-	STLPath / std::to_string( FindGCCVersion() );
-
-	if( !std::filesystem::exists( STLPath ) )
-		return L"";
-
-#endif // __linux__
-
-	return STLPath;
-}
-
-//////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////
 
 std::wstring CompilerGCC::MakeCompilerCommandLineString( const Configuration& rConfiguration, const std::filesystem::path& rFilePath )
 {
@@ -81,41 +43,59 @@ std::wstring CompilerGCC::MakeCompilerCommandLineString( const Configuration& rC
 	else if( FileExtension == ".asm" ) Command += L" -x assembler";
 	else                               Command += L" -x none";
 
+	// Set the input file first.
+	Command += L" " + rFilePath.wstring();
+
+	// Set inclues aka isystem
+	for( const std::filesystem::path& rIncludePath : rConfiguration.m_IncludeDirs )
+	{
+		Command += L" -isystem " + rIncludePath.wstring();
+	}
+
+	// #TODO: Command Line Options, right now we hard code them. Maybe create a project settings page? 
+
+	if( FileExtension != ".c" )
+		Command += L" -m64 -O0 -Wall -Wextra -std=c2a -fno-exception -fno-rtti";
+	else
+		Command += L" -m64 -O0 -Wall -Wextra -fno-exception";
+
 	// Defines
 	// Start by walking-through the user defines
 
+	UTF8Converter UTF8;
+
 	for( const std::string& rDefine : rConfiguration.m_Defines )
 	{
-		Command += L"-D " + ( wchar_t )rDefine.c_str();
+		Command += L" -D";
+
+		// In GCC we need add a "\" where a space is then add a space. e.g. ImTextureID=unsigned\ int
+		for( char Char : rDefine )
+		{
+			if( isspace( Char ) )
+				Command += L"\\ ";
+			else
+				Command += Char;
+		}
+
 	}
+
+	// #TODO: Don't hard code this.
+	Command += L" -DDEBUG ";
+	Command += L"-D_DEBUG ";
+
+	// Set output file
+	Command += L" -o " + GetCompilerOutputPath( rConfiguration, rFilePath ).wstring();
 
 	// Includes
-	// Start by including the standard library headers and any POSIX API files.
+	Command += L" -I.";
 
+	// Includes
+	for( const std::filesystem::path& rIncludePath : rConfiguration.m_IncludeDirs )
 	{
-		for ( const std::filesystem::directory_entry& rEntry : std::filesystem::directory_iterator( FindSTLIncludeDirs() ) )
-		{
-			const std::filesystem::path DirectoryPath = rEntry.path();
-
-			Command +=  L"-include " + DirectoryPath.wstring();
-		}
-
-		// C Lib and POSIX
-		for( const std::filesystem::directory_entry& rEntry : std::filesystem::directory_iterator( "/usr/include" ) )
-		{
-			const std::filesystem::path DirectoryPath = rEntry.path();
-
-			Command +=  L"-include " + DirectoryPath.wstring();
-		}
-
+		Command += L" -I" + rIncludePath.wstring();
 	}
 
-	for ( const std::filesystem::path& rIncludePath : rConfiguration.m_IncludeDirs )
-	{
-		Command +=  L"-include " + rIncludePath.wstring();
-	}
-
-	// Verbosity
+	// Finally, Verbosity
 	if( rConfiguration.m_Verbose )
 	{
 		// Time the execution of each subprocess
@@ -125,11 +105,7 @@ std::wstring CompilerGCC::MakeCompilerCommandLineString( const Configuration& rC
 		Command += L" -v";
 	}
 
-	// Set output file
-	Command += L" -o " + GetCompilerOutputPath( rConfiguration, rFilePath ).wstring();
-
-	// Finally, the input source file
-	Command += L" " + rFilePath.wstring();
+	printf( "Compiling with: %ls\n", Command );
 
 	return Command;
 
@@ -152,6 +128,13 @@ std::wstring CompilerGCC::MakeLinkerCommandLineString( const Configuration& rCon
 			// Start with G++ executable
 			Command += L"g++";
 
+			// Set Input files
+			for( const std::filesystem::path& rInputFile : InputFiles )
+				Command += L" " + rInputFile.wstring();
+
+			// Set output file
+			Command += L" -o " + GetLinkerOutputPath( rConfiguration, rOutputName, Kind ).wstring();
+
 			// Create a shared library
 			if( Kind == Project::Kind::DynamicLibrary )
 				Command += L" -shared";
@@ -159,7 +142,7 @@ std::wstring CompilerGCC::MakeLinkerCommandLineString( const Configuration& rCon
 			// User-defined library directories
 			for( const std::filesystem::path& rLibraryDirectory : rConfiguration.m_LibraryDirs )
 			{
-				Command += L" -L" + rLibraryDirectory.wstring();
+				Command += L" " + rLibraryDirectory.wstring();
 			}
 
 			// Link libraries
@@ -167,23 +150,18 @@ std::wstring CompilerGCC::MakeLinkerCommandLineString( const Configuration& rCon
 			{
 				Command += L" -l" + UTF8.from_bytes( rLibrary );
 			}
-
-			// Set output file
-			Command += L" -o " + GetLinkerOutputPath( rConfiguration, rOutputName, Kind ).wstring();
-
-			// Finally, set the object files
-			for( const std::filesystem::path& rInputFile : InputFiles )
-				Command += L" " + rInputFile.wstring();
-
 		} break;
 
 		case Project::Kind::StaticLibrary:
 		{
 			// Start with AR executable
-			Command += L"bin/ar";
+			Command += L"ar";
 
 			// Command: Replace existing or insert new file(s) into the archive
 			Command += L" r";
+
+			//
+			Command += L"v";
 
 			// Use full path names when matching
 			Command += L'P';
@@ -201,8 +179,8 @@ std::wstring CompilerGCC::MakeLinkerCommandLineString( const Configuration& rCon
 			Command += L" " + GetLinkerOutputPath( rConfiguration, rOutputName, Kind ).wstring();
 
 			// Set input files
-			for( const std::filesystem::path& rInputFile : InputFiles )
-				Command += L" " + rInputFile.wstring();
+			//for( const std::filesystem::path& rInputFile : InputFiles )
+			//	Command += L" " + rInputFile.wstring();
 
 		} break;
 
@@ -210,6 +188,8 @@ std::wstring CompilerGCC::MakeLinkerCommandLineString( const Configuration& rCon
 		{
 		} break;
 	}
+
+	printf( "Linking with: %ls\n", Command );
 
 	return Command;
 
