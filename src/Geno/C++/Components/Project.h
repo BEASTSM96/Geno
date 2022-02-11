@@ -21,6 +21,8 @@
 #include <Common/Event.h>
 #include <GCL/Object.h>
 
+#include <Common/Async/JobSystem.h>
+
 #include <filesystem>
 #include <vector>
 
@@ -65,22 +67,25 @@ public:
 
 //////////////////////////////////////////////////////////////////////////
 
+	void Build      ( void );
 	bool Serialize  ( void );
 	bool Deserialize( void );
 
 //////////////////////////////////////////////////////////////////////////
 
-	void                  SortFileFilters                 ( void );
-	FileFilter*           NewFileFilter                   ( const std::filesystem::path& Name );
-	void                  RemoveFileFilter                ( const std::filesystem::path& Name );
-	FileFilter*           FileFilterByName                ( const std::filesystem::path& Name );
-	std::filesystem::path FileInFileFilter                ( const std::filesystem::path& rFile, const std::filesystem::path& rFileFilter );
-	void                  RenameFileFilter                ( const std::filesystem::path& rFileFilter, const std::string& rName );
-	bool                  NewFile                         ( const std::filesystem::path& rPath, const std::filesystem::path& rFileFilter );
-	bool                  AddFile                         ( const std::filesystem::path& rPath, const std::filesystem::path& rFileFilter );
-	void                  RemoveFile                      ( const std::filesystem::path& rFile, const std::filesystem::path& rFileFilter );
-	void                  RenameFile                      ( const std::filesystem::path& rFile, const std::filesystem::path& rFileFilter, const std::string& rName );
-	std::vector< std::filesystem::path > FindSourceFolders( void );
+	void                                                     SortFileFilters   ( void );
+	FileFilter*                                              NewFileFilter     ( const std::filesystem::path& Name );
+	void                                                     RemoveFileFilter  ( const std::filesystem::path& Name );
+	FileFilter*                                              FileFilterByName  ( const std::filesystem::path& Name );
+	std::filesystem::path                                    FileInFileFilter  ( const std::filesystem::path& rFile, const std::filesystem::path& rFileFilter );
+	void                                                     RenameFileFilter  ( const std::filesystem::path& rFileFilter, const std::string& rName );
+	bool                                                     NewFile           ( const std::filesystem::path& rPath, const std::filesystem::path& rFileFilter );
+	bool                                                     AddFile           ( const std::filesystem::path& rPath, const std::filesystem::path& rFileFilter );
+	void                                                     RemoveFile        ( const std::filesystem::path& rFile, const std::filesystem::path& rFileFilter );
+	void                                                     RenameFile        ( const std::filesystem::path& rFile, const std::filesystem::path& rFileFilter, const std::string& rName );
+	std::vector< JobSystem::JobPtr >&                        LinkerDependencies( void ) { return m_LinkerDependencies; }
+	std::vector< std::shared_ptr< std::filesystem::path > >& CompilerOutputs   ( void ) { return m_CompilerOutputs; }
+	std::vector< std::filesystem::path >                     FindSourceFolders ( void );
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -92,12 +97,14 @@ public:
 
 //////////////////////////////////////////////////////////////////////////
 
-	Kind                                 m_Kind = Kind::Application;
-	Configuration                        m_LocalConfiguration;
+	Kind                                                    m_Kind = Kind::Application;
+	Configuration                                           m_LocalConfiguration;
 
-	std::filesystem::path                m_Location;
-	std::string                          m_Name;
-	std::vector< FileFilter >            m_FileFilters;
+	std::filesystem::path                                   m_Location;
+	std::string                                             m_Name;
+	std::vector< FileFilter >                               m_FileFilters;
+	std::vector< JobSystem::JobPtr >                        m_LinkerDependencies;
+	std::vector< std::shared_ptr< std::filesystem::path > > m_CompilerOutputs;
 
 //////////////////////////////////////////////////////////////////////////
 

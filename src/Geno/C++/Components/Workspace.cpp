@@ -56,68 +56,39 @@ void Workspace::Build( void )
 			}
 		);
 
+
 		for( Project& rProject : ProjectRefs )
 		{
+			//std::cout << "=== Building Project: " << rProject.m_Name << " ===\n";
+
 			Configuration                                           Configuration = m_BuildMatrix.CurrentConfiguration();
-			std::vector< JobSystem::JobPtr >                        LinkerDependencies;
 			std::vector< std::shared_ptr< std::filesystem::path > > CompilerOutputs;
 
+			rProject.m_LocalConfiguration.Override( Configuration );
+
+			// Build Project
+			rProject.Build();
+
+			// Override the workspace config, as the project config could of changed
 			Configuration.Override( rProject.m_LocalConfiguration );
 
-			if( !Configuration.m_OutputDir )
-				Configuration.m_OutputDir = rProject.m_Location;
-
-			// TODO: Remove any duplicate files, since a single file can exist in multiple filters
-
-			for( const FileFilter& rFileFilter : rProject.m_FileFilters )
-			{
-				for( const std::filesystem::path& rFile : rFileFilter.Files )
-				{
-					auto Extension = rFile.extension();
-
-					// Skip any files that shouldn't be compiled
-					// TODO: We want to support other languages in the future. Perhaps store the compiler in each file-config?
-					if( Extension != ".c"
-					 && Extension != ".cc"
-					 && Extension != ".cpp"
-					 && Extension != ".cxx"
-					 && Extension != ".c++" )
-						continue;
-
-					auto Output = std::make_shared< std::filesystem::path >();
-
-					CompilerOutputs.push_back( Output );
-
-					LinkerDependencies.push_back( JobSystem::Instance().NewJob(
-						[ Configuration, rFile, Output ]( void )
-						{
-							if( !Configuration.m_Compiler )
-							{
-								std::cerr << "Failed to compile " << rFile << ". No compiler active!\n";
-								return;
-							}
-
-							if( auto Result = Configuration.m_Compiler->Compile( Configuration, rFile ) )
-							{
-								*Output = *Result;
-							}
-						}
-					) );
-				}
-			}
+			// Set project compiler outputs
+			CompilerOutputs = rProject.CompilerOutputs();
 
 			// Assemble a list of link jobs for projects that this depends on
 			for( std::string& rLibrary : Configuration.m_Libraries )
 			{
 				auto Name = std::find( LinkerJobProjectNames.begin(), LinkerJobProjectNames.end(), rLibrary );
 				if( Name != LinkerJobProjectNames.end() )
-					LinkerDependencies.push_back( *std::next( LinkerJobs.begin(), std::distance( LinkerJobProjectNames.begin(), Name ) ) );
+					rProject.LinkerDependencies().push_back( *std::next( LinkerJobs.begin(), std::distance( LinkerJobProjectNames.begin(), Name ) ) );
 			}
 
 			const std::wstring  ProjectName = UTF8Converter.from_bytes( rProject.m_Name );
 			const Project::Kind Kind        = rProject.m_Kind;
 
 			LinkerJobProjectNames.push_back( rProject.m_Name );
+
+			// Push a new job with the projects link job and linker dependencies
 			LinkerJobs.push_back( JobSystem::Instance().NewJob(
 				[ Configuration, ProjectName, Kind, CompilerOutputs, LinkerOutput ]( void )
 				{
@@ -133,8 +104,10 @@ void Workspace::Build( void )
 							*LinkerOutput = *Result;
 					}
 				},
-				LinkerDependencies
+				rProject.LinkerDependencies()
 			) );
+
+			//std::cout << "=== Done building '" << rProject.m_Name << "' Output -> "  << Configuration.m_Compiler->GetLinkerOutputPath( Configuration, ProjectName, rProject.m_Kind ).string() << " === \n";
 		}
 
 		JobSystem::Instance().NewJob(

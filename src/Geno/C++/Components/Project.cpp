@@ -62,6 +62,57 @@ Project& Project::operator=( Project&& rrOther )
 
 //////////////////////////////////////////////////////////////////////////
 
+void Project::Build( void )
+{
+	UTF8Converter UTF8Converter;
+
+	if( !m_LocalConfiguration.m_OutputDir )
+		m_LocalConfiguration.m_OutputDir = m_Location;
+
+	Configuration Config = m_LocalConfiguration;
+
+	// Build Project
+
+	for( const FileFilter& rFileFilter : m_FileFilters )
+	{
+		for( const std::filesystem::path& rFile : rFileFilter.Files )
+		{
+			auto Extension = rFile.extension();
+
+			// Skip any files that shouldn't be compiled
+			// TODO: We want to support other languages in the future. Perhaps store the compiler in each file-config?
+			if( Extension != ".c"
+			 && Extension != ".cc"
+			 && Extension != ".cpp"
+			 && Extension != ".cxx"
+			 && Extension != ".c++" )
+				continue;
+
+			auto Output = std::make_shared< std::filesystem::path >();
+
+			m_CompilerOutputs.push_back( Output );
+
+			m_LinkerDependencies.push_back( JobSystem::Instance().NewJob(
+				[Config, rFile, Output]( void )
+				{
+					if( !Config.m_Compiler )
+					{
+						std::cerr << "Failed to compile " << rFile << ". No compiler active!\n";
+						return;
+					}
+
+					if( auto Result = Config.m_Compiler->Compile( Config, rFile ) )
+					{
+						*Output = *Result;
+					}
+				}
+			) );
+		}
+	}
+}
+
+//////////////////////////////////////////////////////////////////////////
+
 bool Project::Serialize( void )
 {
 	UTF8Converter UTF8;
@@ -538,7 +589,7 @@ void Project::RenameFile( const std::filesystem::path& rFile, const std::filesys
 
 std::vector< std::filesystem::path > Project::FindSourceFolders( void )
 {
-	// Walk through all files and get the parent path. And check if that path does not exist already.
+	// Walk through all files and get the parent path. And check if that path doesn't already exist in the list.
 
 	std::vector<std::filesystem::path> SourcePaths;
 
