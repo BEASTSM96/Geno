@@ -19,6 +19,7 @@
 
 #include "Application.h"
 #include "Common/LocalAppData.h"
+#include "Components/Workspace.h"
 #include "GUI/Modals/IModal.h"
 #include "GUI/Platform/Win32/Win32DropTarget.h"
 #include "GUI/PrimaryMonitor.h"
@@ -69,6 +70,7 @@ MainWindow::MainWindow( void )
 	m_Height                 = 3 * rMonitor.Height() / 4;
 
 	glfwWindowHint( GLFW_DECORATED, GLFW_FALSE );
+	glfwWindowHint( GLFW_VISIBLE, GLFW_FALSE );
 	glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, 3 );
 	glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, 3 );
 	
@@ -206,6 +208,14 @@ MainWindow::~MainWindow( void )
 	glfwTerminate();
 
 } // ~MainWindow
+
+//////////////////////////////////////////////////////////////////////////
+
+void MainWindow::Show( void )
+{
+	glfwShowWindow( m_pWindow );
+
+} // Show
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -400,6 +410,7 @@ void MainWindow::DragDrop( const Drop& rDrop, int X, int Y )
 void MainWindow::AddRecentWorkspace( const char* pPath )
 {
 	m_RecentWorkspaces.push_back( pPath );
+
 } // AddRecentWorkspace
 
 //////////////////////////////////////////////////////////////////////////
@@ -433,16 +444,37 @@ void* MainWindow::ImGuiSettingsReadOpenCB( ImGuiContext* /*pContext*/, ImGuiSett
 
 void MainWindow::ImGuiSettingsReadLineCB( ImGuiContext* /*pContext*/, ImGuiSettingsHandler* pHandler, void* pEntry, const char* pLine )
 {
-	MainWindow*           pSelf = ( MainWindow* )pHandler->UserData;
-	const char*           pName = ( const char* )pEntry;
-	int                   Bool;
+	MainWindow*            pSelf = ( MainWindow* )pHandler->UserData;
+	const std::string_view Name  = ( const char* )pEntry;
 
-	if(      strcmp( pName, "Text Edit" ) == 0 ) { if( sscanf( pLine, "Active=%d", &Bool ) == 1 ) pSelf->pTitleBar->ShowTextEdit          = Bool; }
-	else if( strcmp( pName, "Workspace" ) == 0 ) { if( sscanf( pLine, "Active=%d", &Bool ) == 1 ) pSelf->pTitleBar->ShowWorkspaceOutliner = Bool; }
-	else if( strcmp( pName, "Output"    ) == 0 ) { if( sscanf( pLine, "Active=%d", &Bool ) == 1 ) pSelf->pTitleBar->ShowOutputWindow      = Bool; }
-
-	// Load Recent Workspaces
-	if( strncmp( pLine, "Path=", 5 ) == 0 ) { pSelf->AddRecentWorkspace( pLine + 5 ); }
+	if( Name == "Text Edit" )
+	{
+		int Active;
+		if( sscanf( pLine, "Active=%d", &Active ) == 1 )
+			pSelf->pTitleBar->ShowTextEdit = Active;
+	}
+	else if( Name == "Workspace" )
+	{
+		int Active;
+		if( sscanf( pLine, "Active=%d", &Active ) == 1 )
+			pSelf->pTitleBar->ShowWorkspaceOutliner = Active;
+	}
+	else if( Name == "Output" )
+	{
+		int Active;
+		if( sscanf( pLine, "Active=%d", &Active ) == 1 )
+			pSelf->pTitleBar->ShowOutputWindow = Active;
+	}
+	else if( Name == "Recent Workspaces" )
+	{
+		if( strncmp( pLine, "Path=", 5 ) == 0 )
+			pSelf->AddRecentWorkspace( pLine + 5 );
+	}
+	else if( Name == "Last Open Workspace" )
+	{
+		if( strncmp( pLine, "Path=", 5 ) == 0 )
+			Application::Instance().LoadWorkspace( pLine + 5 );
+	}
 
 } // ImGuiSettingsReadLineCB
 
@@ -461,6 +493,13 @@ void MainWindow::ImGuiSettingsWriteAllCB( ImGuiContext* pContext, ImGuiSettingsH
 	{
 		pOutBuffer->appendf( "[%s][%s]\n", pHandler->TypeName, "Recent Workspaces" );
 		pOutBuffer->appendf( "Path=%s\n", MainWindow::Instance().GetRecentWorkspaces()[ I ].string().c_str() );
+		pOutBuffer->append( "\n" );
+	}
+
+	if( Workspace* pCurrentWorkspace = Application::Instance().CurrentWorkspace() )
+	{
+		pOutBuffer->appendf( "[%s][%s]\n", pHandler->TypeName, "Last Open Workspace" );
+		pOutBuffer->appendf( "Path=%s%s\n", ( pCurrentWorkspace->m_Location / pCurrentWorkspace->m_Name ).string().c_str(), Workspace::EXTENSION.data() );
 		pOutBuffer->append( "\n" );
 	}
 
