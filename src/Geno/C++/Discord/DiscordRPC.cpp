@@ -92,7 +92,7 @@ void DiscordRPC::UpdateDiscord( void )
 static void HandleDiscordReady( const DiscordUser* connectedUser )
 {
 	// TODO: Print to status bar
-	printf( "\nDiscord: connected to user %s#%s - %s\n", connectedUser->username, connectedUser->discriminator, connectedUser->userId );
+	printf( "\nDiscord: connected to user %s - %s\n", connectedUser->username, connectedUser->userId );
 
 } // HandleDiscordReady
 
