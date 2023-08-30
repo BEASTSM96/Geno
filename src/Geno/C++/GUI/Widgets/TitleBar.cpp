@@ -178,7 +178,35 @@ void TitleBar::Draw( void )
 				float ScreenX = ImGui::GetCursorScreenPos().x;
 				float ScreenY = ImGui::GetCursorScreenPos().y;
 
-				if( pWorkspace->m_AppProcess )
+				if( !pWorkspace->m_AppProcess->IsRunning() )
+				{
+					const float ArrowSize = 0.75f;
+					const float TextSize = ImGui::CalcTextSize( "Run Project" ).x + ImGui::GetStyle().FramePadding.x + 2.1f;
+					ImRect      ButtonRect = ImRect( ImVec2( ScreenX, ScreenY ), ImVec2( ScreenX + ArrowSize * 25 + TextSize, ScreenY + ArrowSize * 25 ) );
+
+					bool Hovered = false;
+					bool Held = false;
+					bool Pressed = ImGui::ButtonBehavior( ButtonRect, ImGui::GetID( "RUN_PROJECT" ), &Hovered, &Held, 0 );
+
+					if( Hovered )
+					{
+						const ImU32 Color = ImGui::GetColorU32( Held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered );
+						pDrawList->AddRectFilled( ButtonRect.Min, ButtonRect.Max, Color );
+					}
+
+					{
+						ImGui::RenderArrow( pDrawList, ImGui::GetCurrentWindow()->DC.CursorPos + ImGui::GetStyle().FramePadding, IM_COL32( 255, 255, 255, 255 ), ImGuiDir_Right, 1 );
+						ImGui::SameLine();
+						ImGui::SetCursorPosX( ImGui::GetCursorPosX() + 21.0f );
+						ImGui::Text( "Run Project" );
+					}
+
+					if( Pressed )
+					{
+						ActionBuildBuildAndRun();
+					}
+				}
+				else
 				{
 					const float  BoxSize = 0.75f;
 					const float  FramePadding = ImGui::GetStyle().FramePadding.x;
@@ -207,34 +235,6 @@ void TitleBar::Draw( void )
 					if( Pressed )
 					{
 						ActionBuildStopRun();
-					}
-				}
-				else
-				{
-					const float ArrowSize = 0.75f;
-					const float TextSize = ImGui::CalcTextSize( "Run Project" ).x + ImGui::GetStyle().FramePadding.x + 2.1f;
-					ImRect      ButtonRect = ImRect( ImVec2( ScreenX, ScreenY ), ImVec2( ScreenX + ArrowSize * 25 + TextSize, ScreenY + ArrowSize * 25 ) );
-
-					bool Hovered = false;
-					bool Held    = false;
-					bool Pressed = ImGui::ButtonBehavior( ButtonRect, ImGui::GetID( "RUN_PROJECT" ), &Hovered, &Held, 0 );
-
-					if( Hovered )
-					{
-						const ImU32 Color = ImGui::GetColorU32( Held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered );
-						pDrawList->AddRectFilled( ButtonRect.Min, ButtonRect.Max, Color );
-					}
-
-					{
-						ImGui::RenderArrow( pDrawList, ImGui::GetCurrentWindow()->DC.CursorPos + ImGui::GetStyle().FramePadding, IM_COL32( 255, 255, 255, 255 ), ImGuiDir_Right, 1 );
-						ImGui::SameLine();
-						ImGui::SetCursorPosX( ImGui::GetCursorPosX() + 21.0f );
-						ImGui::Text( "Run Project" );
-					}
-
-					if( Pressed )
-					{
-						ActionBuildBuildAndRun();
 					}
 				}
 
@@ -276,7 +276,7 @@ void TitleBar::Draw( void )
 					if( Workspace* pWorkspace = Application::Instance().CurrentWorkspace() )
 					{
 						if( pWorkspace->m_AppProcess )
-							pWorkspace->m_AppProcess->Kill();
+							pWorkspace->m_AppProcess->ForceKill();
 					}
 
 					exit( 0 );
@@ -509,8 +509,6 @@ void TitleBar::ActionBuildBuildAndRun( void )
 	{
 		MainWindow::Instance().pOutputWindow->ClearCapture();
 
-		MainWindow::Instance().pTextEdit->SaveAllFiles();
-
 		if( MainWindow::Instance().pTextEdit )
 			MainWindow::Instance().pTextEdit->SaveAllFiles();
 
@@ -521,11 +519,9 @@ void TitleBar::ActionBuildBuildAndRun( void )
 			const std::string OutputString = OutputFile.string();
 			const std::wstring OutputWString = OutputFile.wstring();
 
-			rWorkspace.m_AppProcess = Process( OutputWString );
+			rWorkspace.m_AppProcess->SetCommandLine( OutputWString );
 
 			std::cout << "=== Running " << OutputString << "===\n";
-
-			const int ExitCode = rWorkspace.m_AppProcess.ResultOf();
 
 			const int ExitCode = rWorkspace.m_AppProcess->ResultOf();
 			std::cout << "=== " << OutputString << " finished with exit code " << ExitCode << " ===\n";
@@ -595,9 +591,9 @@ void TitleBar::ActionBuildStopRun( void )
 {
 	if( Workspace* pWorkspace = Application::Instance().CurrentWorkspace() )
 	{
-		if( Process AppProcess = pWorkspace->m_AppProcess )
+		if( std::unique_ptr<Process>& rAppProcess = pWorkspace->m_AppProcess )
 		{
-			AppProcess.Kill();
+			rAppProcess->TryKill();
 		}
 	}
 } // ActionBuildStopRun

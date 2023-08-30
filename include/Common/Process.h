@@ -36,13 +36,20 @@ class Process
 public:
 	 Process( void ) { }
 	 Process( const std::wstring_view& rCommandLine );
-	~Process( void ) { Kill(); }
+	~Process( void ) { ForceKill(); }
 	 Process( const Process& rOther );
 	 Process( Process&& rrOther ) noexcept;
 
 	 Process& operator=( const Process& rOther )
 	 {
-		 return *this = Process( rOther );
+		 if( this == &rOther )
+			 return *this;
+
+		 m_CommandLine = rOther.m_CommandLine;
+		 m_ExitCode    = rOther.m_ExitCode;
+		 m_Pid         = rOther.m_Pid;
+
+		 return *this;
 	 }
 
 	 Process& operator=( const Process&& rrOther ) noexcept
@@ -63,17 +70,19 @@ public:
 //////////////////////////////////////////////////////////////////////////
 
 	 void         SetCommandLine( const std::wstring& rCommandLine ) { m_CommandLine = rCommandLine; }
-	 void         Kill          ( void );
+	 void         ForceKill     ( void );
+	 void         TryKill       ( void );
 	 void         Start         ( FILE* pOutputStream );
 	 int          Wait          ( void );
 	 int          ResultOf      ( void );
 	 std::wstring OutputOf      ( int& rResult );
 	 std::wstring OutputOf      ( void );
+	 bool         IsRunning     ( void )                             { return m_Running; }
 
 private:
 
 	std::wstring m_CommandLine;
-
+	bool m_Running = false;
 	int m_ExitCode  = 0;
 
 #if defined( _WIN32 )

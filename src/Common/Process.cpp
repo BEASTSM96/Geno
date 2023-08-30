@@ -116,6 +116,8 @@ void Process::Start( FILE* pOutputStream )
 
 #endif // __linux__ || __APPLE__
 
+	m_Running = true;
+
 } // Start
 
 //////////////////////////////////////////////////////////////////////////
@@ -135,6 +137,7 @@ int Process::Wait( void )
 
 	m_Pid = nullptr;
 	m_ExitCode = ExitCode;
+	m_Running = false;
 
 	return Result ? m_ExitCode : -1;
 
@@ -150,25 +153,34 @@ int Process::Wait( void )
 
 //////////////////////////////////////////////////////////////////////////
 
-void Process::Kill( void )
+void Process::ForceKill( void )
 {
 
 #if defined( _WIN32 )
 
-	//CloseHandle( m_Pid );
-	TerminateProcess( m_Pid, 1 );
+	TerminateProcess( m_Pid, 0 );
 
 	m_Pid = nullptr;
 
 #elif defined( __linux__ ) || defined( __APPLE__ ) // _WIN32
 
-	m_ExitCode = kill( m_Pid, SIGUSR1 );
+	// Now we could use SIGTERM if we want to be nice. But we'll use SIGKILL
+	m_ExitCode = kill( m_Pid, SIGKILL );
 
 	m_Pid = 0;
 
 #endif // __linux__ || __APPLE__
 
-} // Kill
+	m_Running = false;
+
+} // ForceKill
+
+//////////////////////////////////////////////////////////////////////////
+
+void Process::TryKill( void )
+{
+	ForceKill();
+} // TryKill
 
 //////////////////////////////////////////////////////////////////////////
 

@@ -33,6 +33,7 @@ Workspace::Workspace( std::filesystem::path Location )
 	: m_Location( std::move( Location ) )
 	, m_Name    ( "MyWorkspace" )
 {
+	m_AppProcess = std::make_unique<Process>();
 } // Workspace
 
 //////////////////////////////////////////////////////////////////////////
