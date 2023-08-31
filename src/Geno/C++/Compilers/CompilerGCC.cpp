@@ -20,6 +20,7 @@
 #include <Common/Process.h>
 
 #include <filesystem>
+#include <iostream>
 
 //////////////////////////////////////////////////////////////////
 
@@ -105,7 +106,7 @@ std::wstring CompilerGCC::MakeCompilerCommandLineString( const Configuration& rC
 		Command += L" -v";
 	}
 
-	printf( "Compiling with: %ls\n", Command );
+	std::wcout << "Compiling with: " << Command << "\n";
 
 	return Command;
 
@@ -189,7 +190,7 @@ std::wstring CompilerGCC::MakeLinkerCommandLineString( const Configuration& rCon
 		} break;
 	}
 
-	printf( "Linking with: %ls\n", Command );
+	std::wcout << "Linking with: " << Command << "\n";
 
 	return Command;
 
