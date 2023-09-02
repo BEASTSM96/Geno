@@ -159,6 +159,91 @@ void TitleBar::Draw( void )
 			}
 		}
 
+		// Build/Run project
+		{
+			if( Workspace* pWorkspace = Application::Instance().CurrentWorkspace() )
+			{
+				ImDrawList* pDrawList = ImGui::GetWindowDrawList();
+
+				ImGui::SetCursorPosX( ImGui::GetCursorPosX() + 10.0f );
+				ImGui::Separator();
+				ImGui::SetCursorPosX( ImGui::GetCursorPosX() + 10.0f );
+
+				ImGui::Spacing();
+				ImGui::SetNextItemWidth( 305.0f );
+				ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( 1, 1 ) );
+				ImGui::PushStyleColor( ImGuiCol_Button, ImVec4( 0, 0, 0, 0 ) );
+				ImGui::SetCursorPosY( 10.0f );
+
+				float ScreenX = ImGui::GetCursorScreenPos().x;
+				float ScreenY = ImGui::GetCursorScreenPos().y;
+
+				if( !pWorkspace->m_AppProcess->IsRunning() )
+				{
+					const float ArrowSize = 0.75f;
+					const float TextSize = ImGui::CalcTextSize( "Run Project" ).x + ImGui::GetStyle().FramePadding.x + 2.1f;
+					ImRect      ButtonRect = ImRect( ImVec2( ScreenX, ScreenY ), ImVec2( ScreenX + ArrowSize * 25 + TextSize, ScreenY + ArrowSize * 25 ) );
+
+					bool Hovered = false;
+					bool Held = false;
+					bool Pressed = ImGui::ButtonBehavior( ButtonRect, ImGui::GetID( "RUN_PROJECT" ), &Hovered, &Held, 0 );
+
+					if( Hovered )
+					{
+						const ImU32 Color = ImGui::GetColorU32( Held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered );
+						pDrawList->AddRectFilled( ButtonRect.Min, ButtonRect.Max, Color );
+					}
+
+					{
+						ImGui::RenderArrow( pDrawList, ImGui::GetCurrentWindow()->DC.CursorPos + ImGui::GetStyle().FramePadding, IM_COL32( 255, 255, 255, 255 ), ImGuiDir_Right, 1 );
+						ImGui::SameLine();
+						ImGui::SetCursorPosX( ImGui::GetCursorPosX() + 21.0f );
+						ImGui::Text( "Run Project" );
+					}
+
+					if( Pressed )
+					{
+						ActionBuildBuildAndRun();
+					}
+				}
+				else
+				{
+					const float  BoxSize = 0.75f;
+					const float  FramePadding = ImGui::GetStyle().FramePadding.x;
+					const float  TextSize = ImGui::CalcTextSize( "Stop Running" ).x + FramePadding + 2.1f;
+					ImRect       ButtonRect = ImRect( ImVec2( ScreenX, ScreenY ), ImVec2( ScreenX + BoxSize * 25 + TextSize,     ScreenY + BoxSize * 25 ) );
+					ImRect       IconRect   = ImRect( ImVec2( ScreenX, ScreenY ), ImVec2( ScreenX + BoxSize * 25 + FramePadding, ScreenY + BoxSize * 25 ) );
+
+					bool Hovered = false;
+					bool Held    = false;
+					bool Pressed = ImGui::ButtonBehavior( ButtonRect, ImGui::GetID( "STOP_PROJECT" ), &Hovered, &Held, 0 );
+
+					if( Hovered )
+					{
+						const ImU32 Color = ImGui::GetColorU32( Held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered );
+						pDrawList->AddRectFilled( ButtonRect.Min, ButtonRect.Max, Color );
+					}
+
+					{
+						pDrawList->AddRectFilled( IconRect.Max, IconRect.Min, IM_COL32( 255, 255, 255, 255 ) );
+
+						ImGui::SameLine();
+						ImGui::SetCursorPosX( ImGui::GetCursorPosX() + 21.0f );
+						ImGui::Text( "Stop Running" );
+					}
+
+					if( Pressed )
+					{
+						ActionBuildStopRun();
+					}
+				}
+
+				ImGui::SetCursorPosY( 0.0f );
+				ImGui::PopStyleVar();
+				ImGui::PopStyleColor();
+			}
+		}
+
 #if !defined( __APPLE__ )
 		// System buttons
 		{
@@ -191,7 +276,7 @@ void TitleBar::Draw( void )
 					if( Workspace* pWorkspace = Application::Instance().CurrentWorkspace() )
 					{
 						if( pWorkspace->m_AppProcess )
-							pWorkspace->m_AppProcess->Kill();
+							pWorkspace->m_AppProcess->ForceKill();
 					}
 
 					exit( 0 );
@@ -367,14 +452,16 @@ void TitleBar::ActionFileOpenWorkspace( void )
 	{
 		auto& RecentWorkspaces = MainWindow::Instance().GetRecentWorkspaces();
 
-		if( RecentWorkspaces.size() < 5 )
-			RecentWorkspaces.insert( MainWindow::Instance().GetRecentWorkspaces().begin(), rFile );
-		else
+		if( std::find( RecentWorkspaces.begin(), RecentWorkspaces.end(), rFile ) != RecentWorkspaces.end() )
 		{
-			RecentWorkspaces.pop_back();
-			RecentWorkspaces.insert( MainWindow::Instance().GetRecentWorkspaces().begin(), rFile );
+			if( RecentWorkspaces.size() < 5 )
+				RecentWorkspaces.insert( RecentWorkspaces.begin(), rFile );
+			else
+			{
+				RecentWorkspaces.pop_back();
+				RecentWorkspaces.insert( RecentWorkspaces.begin(), rFile );
+			}
 		}
-
 
 		Application::Instance().LoadWorkspace( rFile );
 	} );
@@ -422,14 +509,8 @@ void TitleBar::ActionBuildBuildAndRun( void )
 	{
 		MainWindow::Instance().pOutputWindow->ClearCapture();
 
-		// Save all open files before building
 		if( MainWindow::Instance().pTextEdit )
-		{
-			TextEdit& rTextEdit = *MainWindow::Instance().pTextEdit;
-
-			for( TextEdit::File& rFile : rTextEdit.Files )
-				rTextEdit.SaveFile( rFile );
-		}
+			MainWindow::Instance().pTextEdit->SaveAllFiles();
 
 		pWorkspace->Events.BuildFinished += []( Workspace& rWorkspace, std::filesystem::path OutputFile, bool /*Success*/ )
 		{
@@ -438,14 +519,14 @@ void TitleBar::ActionBuildBuildAndRun( void )
 			const std::string OutputString = OutputFile.string();
 			const std::wstring OutputWString = OutputFile.wstring();
 
-			std::cout << "=== Running " << OutputString << "===\n";
+			rWorkspace.m_AppProcess->SetCommandLine( OutputWString );
 
-			rWorkspace.m_AppProcess = std::make_unique<Process>( OutputWString );
+			std::cout << "=== Running " << OutputString << "===\n";
 
 			const int ExitCode = rWorkspace.m_AppProcess->ResultOf();
 			std::cout << "=== " << OutputString << " finished with exit code " << ExitCode << " ===\n";
 
-			StatusBar::Instance().SetColor( StatusBar::Color::RED );
+			StatusBar::Instance().SetColor( StatusBar::Color::DEFAULT );
 		};
 
 		pWorkspace->Build();
@@ -503,3 +584,16 @@ void TitleBar::AddBuildMatrixColumn( BuildMatrix::Column& rColumn )
 	ImGui::PopStyleVar();
 
 } // AddBuildMatrixColumn
+
+//////////////////////////////////////////////////////////////////////////
+
+void TitleBar::ActionBuildStopRun( void )
+{
+	if( Workspace* pWorkspace = Application::Instance().CurrentWorkspace() )
+	{
+		if( std::unique_ptr<Process>& rAppProcess = pWorkspace->m_AppProcess )
+		{
+			rAppProcess->TryKill();
+		}
+	}
+} // ActionBuildStopRun

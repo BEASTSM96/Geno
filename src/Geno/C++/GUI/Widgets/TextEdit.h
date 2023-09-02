@@ -356,6 +356,7 @@ public:
 	void OnDragDrop( const Drop& rDrop, int X, int Y );
 	void SaveFile( File& rFile );
 	void ReplaceFile( const std::filesystem::path& rOldPath, const std::filesystem::path& rNewPath );
+	void SaveAllFiles();
 
 	const std::filesystem::path& GetActiveFilePath() const { return m_ActiveFilePath; }
 
